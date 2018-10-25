@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -58,6 +61,10 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/v2/") || strings.HasPrefix(r.URL.Path, "/bridge/") {
+		handleRequestAndRedirect(w, r)
+		return
+	}
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -96,4 +103,27 @@ func getToken(state string, code string) (*oauth2.Token, error) {
 		return nil, fmt.Errorf("code exchange failed: %s", err.Error())
 	}
 	return token, nil
+}
+
+// Serve a reverse proxy for a given url
+func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
+	// parse the url
+	url, _ := url.Parse(target)
+	// create the reverse proxy
+	proxy := httputil.NewSingleHostReverseProxy(url)
+	// Update the headers to allow for SSL redirection
+	req.URL.Host = url.Host
+	req.URL.Scheme = url.Scheme
+	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	req.Host = url.Host
+	// Note that ServeHttp is non blocking and uses a go routine under the hood
+	proxy.ServeHTTP(res, req)
+}
+
+// Given a request send it to the appropriate url
+func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
+	req.URL.Host = "api.meethue.com"
+	req.URL.Scheme = "https"
+	log.Printf("Proxy %s %s", req.Method, req.URL.String())
+	serveReverseProxy(req.URL.String(), res, req)
 }

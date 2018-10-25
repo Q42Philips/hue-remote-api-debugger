@@ -44,8 +44,11 @@
     <body>
         <form name="commandform">
             <h1>CLIP API Debugger</h1>
+            <h2>Authorization:</h2>
+            <input name="authheader" type="text" size="60" value="Bearer" />
+            <button type="button" onclick="login()">Re-login</button>
             <h2>URL:</h2>
-            <input name="commandurl" type="text" size="60" value="https://api.meethue.com/api/0/">
+            <input name="commandurl" type="text" size="60" value="https://api.meethue.com/bridge/nouser/config">
             <div id="buttons">
                 <button type="button" onclick="getHTML('GET')">GET</button>
                 <button type="button" onclick="getHTML('PUT')">PUT</button>
@@ -61,18 +64,28 @@
 </html>
 
 <script language="JavaScript">
+var token = (/accessToken=(.*)(&|$)/.exec(location.href) || [])[1];
+if (!token) {
+    location.href = "/";
+}
+document.commandform.authheader.value = "Bearer " + token;
+</script>
+<script language="JavaScript">
+function login() {
+    location.href = "/login";
+}
 function getHTML(command)
 {
-    if (window.XMLHttpRequest)
-    {
-        var token = (/accessToken=(.*)(&|$)/.exec(location.href) || [])[1];
-        if (!token) {
-            location.href = "/";
-        }
+    if (window.XMLHttpRequest) {
         var http = new XMLHttpRequest();
-        var url = document.commandform.commandurl.value;
-        http.setRequestHeader("X-Token", token);
-        http.open(command, document.commandform.commandurl.value, true);
+        // Request to Go proxy instead
+        var url = document.commandform.commandurl.value.replace(/https?:\/\/api.meethue.com/, "")
+        http.open(command, url, true);
+        http.withCredentials = true;
+        http.setRequestHeader("Authorization", document.commandform.authheader.value);
+        if (command === "POST" || command === "PUT") {
+            http.setRequestHeader("Content-Type", "application/json");
+        }
 
         http.onreadystatechange = function()
         {
