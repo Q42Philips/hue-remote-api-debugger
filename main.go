@@ -22,14 +22,15 @@ var (
 )
 
 func init() {
+	var appid = os.Getenv("HUE_APPID")
 	hueOauthConfig = &oauth2.Config{
 		RedirectURL:  os.Getenv("CALLBACK_URL"),
 		ClientID:     os.Getenv("HUE_CLIENT_ID"),
 		ClientSecret: os.Getenv("HUE_CLIENT_SECRET"),
 		Scopes:       []string{},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://api.meethue.com/oauth2/auth",
-			TokenURL: "https://api.meethue.com/oauth2/token",
+			AuthURL:  fmt.Sprintf("https://api.meethue.com/oauth2/auth?appid=%s&deviceid=%s&devicename=browser", appid, appid),
+			TokenURL: fmt.Sprintf("https://api.meethue.com/oauth2/token"),
 		},
 	}
 }
