@@ -1,16 +1,24 @@
 Hue Remote API Debugger
 -------
 
-# Setup
+# Local setup
+First setup an application at developers.meethue.com, then configure the clientID/Secret:
+
+```bash
+go build
+CALLBACK_URL="http://localhost:8080/hue_callback_url" \
+HUE_CLIENT_ID=myclientid \
+HUE_CLIENT_SECRET=myclientsecret \
+HUE_APPID="myappid" \
+./hue-remote-api-debugger
+```
+
+# App Engine flex setup
 First setup an application at developers.meethue.com, then configure the clientID/Secret:
 
 ```bash
 cp app-with-secrets.example.yaml app-with-secrets.yaml
 vim app-with-secrets.yaml
-```
-
-# Deploying
-```bash
 gcloud app deploy app-with-secrets.yaml --project PROJECT_ID
 ```
 
