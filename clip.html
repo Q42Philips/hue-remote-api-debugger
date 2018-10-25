@@ -45,7 +45,7 @@
         <form name="commandform">
             <h1>CLIP API Debugger</h1>
             <h2>URL:</h2>
-            <input name="commandurl" type="text" size="60" value="/api/1234/">
+            <input name="commandurl" type="text" size="60" value="https://api.meethue.com/api/0/">
             <div id="buttons">
                 <button type="button" onclick="getHTML('GET')">GET</button>
                 <button type="button" onclick="getHTML('PUT')">PUT</button>
@@ -65,7 +65,13 @@ function getHTML(command)
 {
     if (window.XMLHttpRequest)
     {
+        var token = (/accessToken=(.*)(&|$)/.exec(location.href) || [])[1];
+        if (!token) {
+            location.href = "/";
+        }
         var http = new XMLHttpRequest();
+        var url = document.commandform.commandurl.value;
+        http.setRequestHeader("X-Token", token);
         http.open(command, document.commandform.commandurl.value, true);
 
         http.onreadystatechange = function()
