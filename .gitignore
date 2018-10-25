@@ -1,1 +1,3 @@
+*.env
 app-with-secrets.yaml
+hue-remote-api-debugger
