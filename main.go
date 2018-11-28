@@ -29,7 +29,7 @@ func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string) 
 	return &oauth2.Config{
 		RedirectURL:  callbackURL,
 		ClientID:     clientID,
-		ClientSecret: clientID,
+		ClientSecret: clientSecret,
 		Scopes:       []string{},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  fmt.Sprintf("%s/oauth2/auth?appid=%s&deviceid=%s&devicename=browser", apiEndPoint, appID, appID),
