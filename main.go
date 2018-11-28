@@ -17,24 +17,34 @@ import (
 )
 
 var (
-	hueOauthConfig *oauth2.Config
+	// HueOauthConfig specifies how to use OAuth
+	HueOauthConfig *oauth2.Config
 )
 var (
 	oauthStateString = "pseudo-random"
 )
 
-func init() {
-	var appid = os.Getenv("HUE_APPID")
-	hueOauthConfig = &oauth2.Config{
-		RedirectURL:  os.Getenv("CALLBACK_URL"),
-		ClientID:     os.Getenv("HUE_CLIENT_ID"),
-		ClientSecret: os.Getenv("HUE_CLIENT_SECRET"),
+// MakeConfig sets-up the OAuth config
+func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string) *oauth2.Config {
+	return &oauth2.Config{
+		RedirectURL:  callbackURL,
+		ClientID:     clientID,
+		ClientSecret: clientID,
 		Scopes:       []string{},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  fmt.Sprintf("https://api.meethue.com/oauth2/auth?appid=%s&deviceid=%s&devicename=browser", appid, appid),
-			TokenURL: fmt.Sprintf("https://api.meethue.com/oauth2/token"),
+			AuthURL:  fmt.Sprintf("%s/oauth2/auth?appid=%s&deviceid=%s&devicename=browser", apiEndPoint, appID, appID),
+			TokenURL: fmt.Sprintf("%s/oauth2/token", apiEndPoint),
 		},
 	}
+}
+
+func init() {
+	HueOauthConfig = MakeConfig(
+		os.Getenv("CALLBACK_URL"),
+		os.Getenv("HUE_APPID"),
+		os.Getenv("HUE_CLIENT_ID"),
+		os.Getenv("HUE_CLIENT_SECRET"),
+		"https://api.meethue.com")
 }
 
 func main() {
@@ -79,7 +89,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 
 // HandleHueLogin redirects to Hue Login
 func HandleHueLogin(w http.ResponseWriter, r *http.Request) {
-	url := hueOauthConfig.AuthCodeURL(oauthStateString)
+	url := HueOauthConfig.AuthCodeURL(oauthStateString)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
@@ -105,7 +115,7 @@ func GetToken(state string, code string) (*oauth2.Token, error) {
 	if state != oauthStateString {
 		return nil, fmt.Errorf("invalid oauth state")
 	}
-	token, err := hueOauthConfig.Exchange(oauth2.NoContext, code)
+	token, err := HueOauthConfig.Exchange(oauth2.NoContext, code)
 	if err != nil {
 		return nil, fmt.Errorf("code exchange failed: %s", err.Error())
 	}
