@@ -141,12 +141,21 @@ func ServeReverseProxy(target string, res http.ResponseWriter, req *http.Request
 
 // HandleRequestAndRedirect Given a request send it to the appropriate url
 func HandleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	uri, err := url.Parse(APIEndpoint)
+	target, err := url.Parse(APIEndpoint)
 	if err != nil {
 		log.Fatalf("Invalid APIEndpoint")
 	}
-	req.URL.Host = uri.Host
-	req.URL.Scheme = uri.Scheme
-	log.Printf("Proxy %s %s", req.Method, req.URL.String())
-	ServeReverseProxy(req.URL.String(), res, req)
+	originalURL := req.URL.String()
+
+	// create the reverse proxy
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	// Update the RequestURI & headers to allow for SSL redirection
+	req.URL.Host = target.Host
+	req.URL.Scheme = target.Scheme
+	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	req.Host = target.Host
+
+	// Note that ServeHttp is non blocking and uses a go routine under the hood
+	log.Printf("Proxy %s %s to %s", req.Method, originalURL, req.URL.String())
+	proxy.ServeHTTP(res, req)
 }
