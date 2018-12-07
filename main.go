@@ -19,6 +19,8 @@ import (
 var (
 	// HueOauthConfig specifies how to use OAuth
 	HueOauthConfig *oauth2.Config
+	// APIEndpoint to use for proxying
+	APIEndpoint = "https://api.meethue.com"
 )
 var (
 	oauthStateString = "pseudo-random"
@@ -139,8 +141,12 @@ func ServeReverseProxy(target string, res http.ResponseWriter, req *http.Request
 
 // HandleRequestAndRedirect Given a request send it to the appropriate url
 func HandleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	req.URL.Host = "api.meethue.com"
-	req.URL.Scheme = "https"
+	uri, err := url.Parse(APIEndpoint)
+	if err != nil {
+		log.Fatalf("Invalid APIEndpoint")
+	}
+	req.URL.Host = uri.Host
+	req.URL.Scheme = uri.Scheme
 	log.Printf("Proxy %s %s", req.Method, req.URL.String())
 	ServeReverseProxy(req.URL.String(), res, req)
 }
