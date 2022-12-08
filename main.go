@@ -99,13 +99,14 @@ func redirectToRootWithToken(token *oauth2.Token, w http.ResponseWriter, r *http
 	http.Redirect(w, r, fmt.Sprintf("clip.html?accessToken=%s", token.AccessToken), http.StatusTemporaryRedirect)
 }
 
+var Root = "/"
+
 // HandleHueCallback redirects to
 func HandleHueCallback(handler func(token *oauth2.Token, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		content, err := GetToken(r.FormValue("state"), r.FormValue("code"))
 		if err != nil {
-			fmt.Println(err.Error())
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, fmt.Sprintf("%s?error=%s", Root, url.QueryEscape(err.Error())), http.StatusTemporaryRedirect)
 			return
 		}
 		handler(content, w, r)
