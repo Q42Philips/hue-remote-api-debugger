@@ -5,23 +5,25 @@
 package debugger
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
-	"strings"
 
 	"golang.org/x/oauth2"
 )
 
-var (
+type Debugger struct {
 	// HueOauthConfig specifies how to use OAuth
-	HueOauthConfig *oauth2.Config
+	HueOAuthConfig *oauth2.Config
 	// APIEndpoint to use for proxying
-	APIEndpoint = "https://api.meethue.com"
-)
+	APIEndpoint string
+	// Root, is the root url of the client application
+	Root string
+}
+
 var (
 	oauthStateString = "pseudo-random"
 )
@@ -40,73 +42,19 @@ func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string) 
 	}
 }
 
-func init() {
-	HueOauthConfig = MakeConfig(
-		os.Getenv("CALLBACK_URL"),
-		os.Getenv("HUE_APPID"),
-		os.Getenv("HUE_CLIENT_ID"),
-		os.Getenv("HUE_CLIENT_SECRET"),
-		"https://api.meethue.com")
-}
-
-func main() {
-	// AppEngine health check
-	http.HandleFunc("/_ah/health", healthCheckHandler)
-
-	// Oauth2 client routes
-	http.HandleFunc("/login", HandleHueLogin)
-	http.HandleFunc("/hue_callback_url", HandleHueCallback(redirectToRootWithToken))
-
-	// Debugger application
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/clip.html", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "clip.html")
-	})
-
-	log.Print("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "ok")
-}
-
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/v2/") || strings.HasPrefix(r.URL.Path, "/bridge/") || strings.HasPrefix(r.URL.Path, "/connectionstatus") {
-		HandleRequestAndRedirect(w, r)
-		return
-	}
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	var htmlIndex = `<html>
-<body>
-	<a href="/login">Hue Log In</a>
-</body>
-</html>`
-	fmt.Fprintf(w, htmlIndex)
-}
-
 // HandleHueLogin redirects to Hue Login
-func HandleHueLogin(w http.ResponseWriter, r *http.Request) {
-	url := HueOauthConfig.AuthCodeURL(oauthStateString)
+func (d Debugger) HandleHueLogin(w http.ResponseWriter, r *http.Request) {
+	url := d.HueOAuthConfig.AuthCodeURL(oauthStateString)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func redirectToRootWithToken(token *oauth2.Token, w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, fmt.Sprintf("clip.html?accessToken=%s", token.AccessToken), http.StatusTemporaryRedirect)
-}
-
-var Root = "/"
-
 // HandleHueCallback redirects to
-func HandleHueCallback(handler func(token *oauth2.Token, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func (d Debugger) HandleHueCallback(handler func(token *oauth2.Token, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		content, err := GetToken(r.FormValue("state"), r.FormValue("code"))
+		log.Println(r.FormValue("code"))
+		content, err := d.GetToken(r.FormValue("state"), r.FormValue("code"))
 		if err != nil {
-			http.Redirect(w, r, fmt.Sprintf("%s?error=%s", Root, url.QueryEscape(err.Error())), http.StatusTemporaryRedirect)
+			http.Redirect(w, r, fmt.Sprintf("%s?error=%s", d.Root, url.QueryEscape(err.Error())), http.StatusTemporaryRedirect)
 			return
 		}
 		handler(content, w, r)
@@ -114,11 +62,11 @@ func HandleHueCallback(handler func(token *oauth2.Token, w http.ResponseWriter, 
 }
 
 // GetToken retrieves an OAuth token from the API
-func GetToken(state string, code string) (*oauth2.Token, error) {
+func (d Debugger) GetToken(state string, code string) (*oauth2.Token, error) {
 	if state != oauthStateString {
 		return nil, fmt.Errorf("invalid oauth state")
 	}
-	token, err := HueOauthConfig.Exchange(oauth2.NoContext, code)
+	token, err := d.HueOAuthConfig.Exchange(context.TODO(), code)
 	if err != nil {
 		return nil, fmt.Errorf("code exchange failed: %s", err.Error())
 	}
@@ -141,8 +89,8 @@ func ServeReverseProxy(target string, res http.ResponseWriter, req *http.Request
 }
 
 // HandleRequestAndRedirect Given a request send it to the appropriate url
-func HandleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	target, err := url.Parse(APIEndpoint)
+func (d Debugger) HandleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
+	target, err := url.Parse(d.APIEndpoint)
 	if err != nil {
 		log.Fatalf("Invalid APIEndpoint")
 	}

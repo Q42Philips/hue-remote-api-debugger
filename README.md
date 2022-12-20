@@ -8,12 +8,11 @@ This application can be used to send [CLIP commands](https://developers.meethue.
 - Then configure the proclaimed ClientID/Secret when running the app:
 
 ```bash
-go build
 CALLBACK_URL="http://localhost:8080/hue_callback_url" \
 HUE_CLIENT_ID=myclientid \
 HUE_CLIENT_SECRET=myclientsecret \
 HUE_APPID="myappid" \
-./hue-remote-api-debugger
+go run ./cmd
 ```
 
 # App Engine flex setup
