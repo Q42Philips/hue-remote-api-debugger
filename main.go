@@ -22,11 +22,9 @@ type Debugger struct {
 	APIEndpoint string
 	// Root, is the root url of the client application
 	Root string
+	// StateFn generator
+	StateFn func() string
 }
-
-var (
-	oauthStateString = "pseudo-random"
-)
 
 type AuthVersion int
 
@@ -58,7 +56,7 @@ func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string, 
 
 // HandleHueLogin redirects to Hue Login
 func (d Debugger) HandleHueLogin(w http.ResponseWriter, r *http.Request) {
-	url := d.HueOAuthConfig.AuthCodeURL(oauthStateString)
+	url := d.HueOAuthConfig.AuthCodeURL(d.StateFn())
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 

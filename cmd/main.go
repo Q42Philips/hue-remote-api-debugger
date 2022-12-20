@@ -20,7 +20,9 @@ func init() {
 		os.Getenv("HUE_APPID"),
 		os.Getenv("HUE_CLIENT_ID"),
 		os.Getenv("HUE_CLIENT_SECRET"),
-		"https://api.meethue.com/v2")
+		"https://api.meethue.com/v2",
+		debugger.V2)
+	instance.StateFn = func() string { return "pseudo-random" }
 	instance.APIEndpoint = "https://api.meethue.com"
 }
 
