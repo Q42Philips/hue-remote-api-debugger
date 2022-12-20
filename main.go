@@ -24,6 +24,8 @@ type Debugger struct {
 	Root string
 	// StateFn generator
 	StateFn func() string
+	// State validator
+	ValidateState func(string) bool
 }
 
 type AuthVersion int
@@ -75,7 +77,7 @@ func (d Debugger) HandleHueCallback(handler func(token *oauth2.Token, w http.Res
 
 // GetToken retrieves an OAuth token from the API
 func (d Debugger) GetToken(state string, code string) (*oauth2.Token, error) {
-	if state != oauthStateString {
+	if d.ValidateState != nil && !d.ValidateState(state) {
 		return nil, fmt.Errorf("invalid oauth state")
 	}
 	token, err := d.HueOAuthConfig.Exchange(context.TODO(), code)
