@@ -28,17 +28,31 @@ var (
 	oauthStateString = "pseudo-random"
 )
 
+type AuthVersion int
+
+const (
+	V1 = AuthVersion(1)
+	V2 = AuthVersion(2)
+)
+
 // MakeConfig sets-up the OAuth config
-func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string) *oauth2.Config {
+func MakeConfig(callbackURL, appID, clientID, clientSecret, apiEndPoint string, version AuthVersion) *oauth2.Config {
+	endpoint := oauth2.Endpoint{
+		AuthURL:  fmt.Sprintf("%s/v2/oauth2/authorize?appid=%s&deviceid=%s&devicename=browser", apiEndPoint, appID, appID),
+		TokenURL: fmt.Sprintf("%s/v2/oauth2/token", apiEndPoint),
+	}
+	if version == V1 {
+		endpoint = oauth2.Endpoint{
+			AuthURL:  fmt.Sprintf("%s/oauth2/auth?appid=%s&deviceid=%s&devicename=browser-v1", apiEndPoint, appID, appID),
+			TokenURL: fmt.Sprintf("%s/oauth2/token", apiEndPoint),
+		}
+	}
 	return &oauth2.Config{
 		RedirectURL:  callbackURL,
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Scopes:       []string{},
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  fmt.Sprintf("%s/oauth2/auth?appid=%s&deviceid=%s&devicename=browser", apiEndPoint, appID, appID),
-			TokenURL: fmt.Sprintf("%s/oauth2/token", apiEndPoint),
-		},
+		Endpoint:     endpoint,
 	}
 }
 
